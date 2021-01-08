@@ -1,0 +1,41 @@
+#!/bin/bash
+ACCESS_KEY_ID=$(aws ssm get-parameter --name ACCESS_KEY_ID --with-decryption --query Parameter.Value)
+ACCESS_KEY_ID=`echo $ACCESS_KEY_ID | sed -e 's/^"//' -e 's/"$//'`
+BUCKET=$(aws ssm get-parameter --name BUCKET --with-decryption --query Parameter.Value)
+BUCKET=`echo $BUCKET | sed -e 's/^"//' -e 's/"$//'`
+DB_DATABASE=$(aws ssm get-parameter --name DB_DATABASE --with-decryption --query Parameter.Value)
+DB_DATABASE=`echo $DB_DATABASE | sed -e 's/^"//' -e 's/"$//'`
+DB_PASSWORD=$(aws ssm get-parameter --name DB_PASSWORD --with-decryption --query Parameter.Value)
+DB_PASSWORD=`echo $DB_PASSWORD | sed -e 's/^"//' -e 's/"$//'`
+DB_USERNAME=$(aws ssm get-parameter --name DB_USERNAME --with-decryption --query Parameter.Value)
+DB_USERNAME=`echo $DB_USERNAME | sed -e 's/^"//' -e 's/"$//'`
+DEFAULT_REGION=$(aws ssm get-parameter --name DEFAULT_REGION --with-decryption --query Parameter.Value)
+DEFAULT_REGION=`echo $DEFAULT_REGION | sed -e 's/^"//' -e 's/"$//'`
+SECRET_ACCESS_KEY=$(aws ssm get-parameter --name SECRET_ACCESS_KEY --with-decryption --query Parameter.Value)
+SECRET_ACCESS_KEY=`echo $SECRET_ACCESS_KEY | sed -e 's/^"//' -e 's/"$//'`
+
+cd /usr/share/nginx/html/food-app
+sudo chmod -R 777 storage
+sudo chmod -R 777 bootstrap/cache/
+cd /usr/share/nginx/html/
+sudo chown -R ec2-user:ec2-user food-app
+cd food-app
+composer update
+rm -rf .env
+cp .env.example .env
+sed -i s/'APP_NAME=Laravel'/'APP_NAME="Food Delivery APP"'/g .env
+sed -i s/'DB_DATABASE=laravel'/DB_DATABASE=$DB_DATABASE/g .env
+sed -i s/'DB_USERNAME=root'/DB_USERNAME=$DB_USERNAME/g .env
+sed -i s/'DB_PASSWORD='/DB_PASSWORD=$DB_PASSWORD/g .env
+sed -i s/'AWS_ACCESS_KEY_ID='/AWS_ACCESS_KEY_ID=$ACCESS_KEY_ID/g .env
+sed -i s/'AWS_SECRET_ACCESS_KEY='/AWS_SECRET_ACCESS_KEY=$SECRET_ACCESS_KEY/g .env
+sed -i s/'AWS_DEFAULT_REGION=us-east-1'/AWS_DEFAULT_REGION=$DEFAULT_REGION/g .env
+sed -i s/'AWS_BUCKET='/AWS_BUCKET=$BUCKET/g .env
+sudo systemctl start mysqld.service
+php artisan config:clear
+php artisan key:generate
+php artisan config:cache
+php artisan migrate
+php artisan db:seed
+sudo systemctl stop mysqld.service
+sudo chmod -R 777 storage/logs/

@@ -1,0 +1,4 @@
+#!/bin/bash
+systemctl start mysqld.service
+systemctl start php-fpm.service
+systemctl start nginx.service
